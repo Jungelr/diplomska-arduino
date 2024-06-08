@@ -8,7 +8,7 @@ pipeline {
         }
         stage('Arduino compile'){
             steps {
-                sh "arduino-cli compile ./diplomska_arduino -e"
+                sh "arduino-cli compile ./diplomska_arduino --profile jenkinsbuild -e"
             }
         }
         stage('Deploy') {
