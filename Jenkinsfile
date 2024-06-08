@@ -8,7 +8,7 @@ pipeline {
         }
         stage('Arduino compile'){
             steps {
-                sh "arduino-cli compile -b esp32:esp32:esp32 diplomska_arduino.ino --output-dir ./"
+                sh "arduino-cli compile ./diplomska_arduino -e"
             }
         }
         stage('Deploy') {
