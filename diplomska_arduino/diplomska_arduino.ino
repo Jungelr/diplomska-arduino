@@ -123,22 +123,22 @@ void setup() {
 
 void readEEPROM() {
 
-  EEPROM.begin(4);
+  EEPROM.begin(2051);
   int variables = EEPROM.readInt(0);
-  EEPROM.end();
+  Serial.println(variables);
   int startingAddress = variables * 4 + 4;
   EEPROM.begin(startingAddress);
   int webUsernameLength = EEPROM.readInt(4);
-  Serial.println(webUsernameLength);
   int webPasswordLength = EEPROM.readInt(8);
-  Serial.println(webPasswordLength);
   int idLength = EEPROM.readInt(12);
-  Serial.println(idLength);
   int ssidLength = EEPROM.readInt(16);
-  Serial.println(ssidLength);
   int passwordLength = EEPROM.readInt(20);
-  Serial.println(passwordLength);
   int certificateLength = EEPROM.readInt(24);
+  Serial.println(webUsernameLength);
+  Serial.println(webPasswordLength);
+  Serial.println(idLength);
+  Serial.println(ssidLength);
+  Serial.println(passwordLength);
   Serial.println(certificateLength);
   webUsername = new char[webUsernameLength + 1];
   webPassword = new char[webPasswordLength + 1];
@@ -146,7 +146,6 @@ void readEEPROM() {
   ssid = new char[ssidLength + 1];
   password = new char[passwordLength + 1];
   certifacate = new char[certificateLength + 1];
-  EEPROM.end();
   EEPROM.begin(startingAddress + webUsernameLength + webPasswordLength + idLength + ssidLength + passwordLength + certificateLength);
 
   EEPROM.readString(startingAddress, webUsername, webUsernameLength);
@@ -180,7 +179,7 @@ int STATE = START;
 void loop() {
    
   Serial.println("Hello2");
-  delay(1000);
+  delay(10000);
   // switch (STATE) {
   //   case START:
   //     STATE = WAITING;
