@@ -41,7 +41,7 @@ const char *password = "Family@04";
 
 // Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RST);
 
-String serverName = "http://192.168.1.47";
+String serverName = "https://192.168.0.254:8443";
 
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "pool.ntp.org");
@@ -120,21 +120,22 @@ int STATE = START;
 
 void loop() {
    
-  switch (STATE) {
-    case START:
-      STATE = WAITING;
-      break;
-    case WAITING:
-      doWaiting();
-      break;
-    case ACQUIRE:
-      doAcquire();
-      break;
-    case WATERING:
-      doWatering();
-    default:
-      break;
-  }
+   Serial.println("Hello");
+  // switch (STATE) {
+  //   case START:
+  //     STATE = WAITING;
+  //     break;
+  //   case WAITING:
+  //     doWaiting();
+  //     break;
+  //   case ACQUIRE:
+  //     doAcquire();
+  //     break;
+  //   case WATERING:
+  //     doWatering();
+  //   default:
+  //     break;
+  // }
 }
 
 #define WAITING_INTERVAL 5000
@@ -238,17 +239,13 @@ void releasePump() {
 Data getData() {
   if(WiFi.status()== WL_CONNECTED){ 
     HTTPClient http;
-    Serial.println("xd");
+
     String serverPath = serverName + "/data?id=" + id;
-    Serial.println("xd");
     http.begin(serverPath.c_str());
-    Serial.println("xd");
     int httpResponseCode = http.GET();
-    Serial.println("xd");
     if (httpResponseCode >= 200 && httpResponseCode < 300) {
       String payload = http.getString();
 
-      Serial.println("xd");
       Serial.println(payload);
 
       StaticJsonDocument<200> doc;
