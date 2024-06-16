@@ -8,7 +8,7 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <WiFi.h>
-
+#include <HttpsOTAUpdate.h>
 #include <NTPClient.h>
 #include <WiFiUdp.h>
 #include <HTTPClient.h>
