@@ -98,7 +98,7 @@ void setup() {
   readEEPROM();
   
   //Connect to Wifi
-  WiFi.begin(ssid,password);
+  connectToWifi();
 
   //Start ntp server connection
 
@@ -123,11 +123,10 @@ void setup() {
 
 void readEEPROM() {
 
-  EEPROM.begin(2051);
+  EEPROM.begin(4096);
   int variables = EEPROM.readInt(0);
   Serial.println(variables);
   int startingAddress = variables * 4 + 4;
-  EEPROM.begin(startingAddress);
   int webUsernameLength = EEPROM.readInt(4);
   int webPasswordLength = EEPROM.readInt(8);
   int idLength = EEPROM.readInt(12);
@@ -140,31 +139,19 @@ void readEEPROM() {
   Serial.println(ssidLength);
   Serial.println(passwordLength);
   Serial.println(certificateLength);
-  webUsername = new char[webUsernameLength + 1];
-  webPassword = new char[webPasswordLength + 1];
-  id = new char[idLength + 1];
-  ssid = new char[ssidLength + 1];
-  password = new char[passwordLength + 1];
-  certifacate = new char[certificateLength + 1];
-  EEPROM.begin(startingAddress + webUsernameLength + webPasswordLength + idLength + ssidLength + passwordLength + certificateLength);
+  webUsername = (char *) malloc(webUsernameLength + 1);
+  webPassword = (char *) malloc(webPasswordLength + 1);
+  id = (char *) malloc(idLength + 1);
+  ssid = (char *) malloc(ssidLength + 1);
+  password = (char *) malloc(passwordLength + 1);
+  certifacate = (char *) malloc(certificateLength + 1);
 
-  EEPROM.readString(startingAddress, webUsername, webUsernameLength);
-  webUsername[webUsernameLength] = '\0';
-
-  EEPROM.readString(startingAddress + webUsernameLength, webPassword, webPasswordLength);
-  webPassword[webPasswordLength] = '\0';
-
-  EEPROM.readString(startingAddress + webUsernameLength + webPasswordLength, id, idLength);
-  id[idLength] = '\0';
-
-  EEPROM.readString(startingAddress + webUsernameLength + webPasswordLength + idLength, ssid, ssidLength);
-  ssid[ssidLength] = '\0';
-
-  EEPROM.readString(startingAddress + webUsernameLength + webPasswordLength + idLength + ssidLength, password, passwordLength);
-  password[passwordLength] = '\0';
-
-  EEPROM.readString(startingAddress + webUsernameLength + webPasswordLength + idLength + ssidLength + passwordLength, certifacate, certificateLength);
-  certifacate[certificateLength] = '\0';
+  readString(startingAddress, webUsername, webUsernameLength);
+  readString(startingAddress + webUsernameLength, webPassword, webPasswordLength);
+  readString(startingAddress + webUsernameLength + webPasswordLength, id, idLength);
+  readString(startingAddress + webUsernameLength + webPasswordLength + idLength, ssid, ssidLength);
+  readString(startingAddress + webUsernameLength + webPasswordLength + idLength + ssidLength, password, passwordLength);
+  readString(startingAddress + webUsernameLength + webPasswordLength + idLength + ssidLength + passwordLength, certifacate, certificateLength);
 
   Serial.println(webUsername);
   Serial.println(webPassword);
@@ -172,6 +159,28 @@ void readEEPROM() {
   Serial.println(ssid);
   Serial.println(password);
   Serial.println(certifacate);
+  EEPROM.end();
+}
+
+void readString(int startingAddress, char *output, int length) {
+  for (int i = startingAddress; i < startingAddress + length; i++ ){
+    output[i - startingAddress] = (char) EEPROM.read(i);
+  }
+  output[length] = '\0';
+}
+
+void connectToWifi() {
+  //Connect to Wifi
+  Serial.print("Attempting to connect to SSID: ");
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    Serial.print(".");
+    delay(1000);
+  }
+
+  Serial.print("Connected to ");
+  Serial.println(ssid);
 }
 
 int STATE = START;
