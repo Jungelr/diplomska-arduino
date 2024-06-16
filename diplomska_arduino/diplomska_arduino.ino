@@ -120,7 +120,7 @@ int STATE = START;
 
 void loop() {
    
-   Serial.println("Hello");
+   Serial.println("Hello2");
   // switch (STATE) {
   //   case START:
   //     STATE = WAITING;
