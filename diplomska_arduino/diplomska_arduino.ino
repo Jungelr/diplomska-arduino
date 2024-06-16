@@ -13,6 +13,7 @@
 #include <WiFiUdp.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
+#include <EEPROM.h>
 
 //433E6 for Asia
 //866E6 for Europe
@@ -36,18 +37,21 @@
 #define WATERING 4
 #define WATERED_WAITING 5
 
-const char *ssid = "Linksys EXT1";
-const char *password = "Family@04";
-
 // Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RST);
+
+char *webUsername;
+char *webPassword;
+char *id;
+char *url;
+char *ssid;
+char *password;
+char *certifacate;
+
 
 String serverName = "https://192.168.0.254:8443";
 
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "pool.ntp.org");
-
-const char *id = "123";
-
 class Data {
   int max;
   int min;
@@ -91,6 +95,7 @@ public:
 void setup() {
   //initialize Serial Monitor
   Serial.begin(115200);
+  readEEPROM();
   
   //Connect to Wifi
   WiFi.begin(ssid,password);
@@ -116,11 +121,61 @@ void setup() {
   pinMode(DATA, ANALOG);
 }
 
+void readEEPROM() {
+
+  int variables = EEPROM.readInt(0);
+  int startingAddress = variables * 4 + 4;
+  int webUsernameLength = EEPROM.readInt(4);
+  Serial.println(webUsernameLength);
+  int webPasswordLength = EEPROM.readInt(8);
+  Serial.println(webPasswordLength);
+  int idLength = EEPROM.readInt(12);
+  Serial.println(idLength);
+  int ssidLength = EEPROM.readInt(16);
+  Serial.println(ssidLength);
+  int passwordLength = EEPROM.readInt(20);
+  Serial.println(passwordLength);
+  int certificateLength = EEPROM.readInt(24);
+  Serial.println(certificateLength);
+  webUsername = new char[webUsernameLength + 1];
+  webPassword = new char[webPasswordLength + 1];
+  id = new char[idLength + 1];
+  ssid = new char[ssidLength + 1];
+  password = new char[passwordLength + 1];
+  certifacate = new char[certificateLength + 1];
+
+  EEPROM.readString(startingAddress, webUsername, webUsernameLength);
+  webUsername[webUsernameLength] = '\0';
+
+  EEPROM.readString(startingAddress + webUsernameLength, webPassword, webPasswordLength);
+  webPassword[webPasswordLength] = '\0';
+
+  EEPROM.readString(startingAddress + webUsernameLength + webPasswordLength, id, idLength);
+  id[idLength] = '\0';
+
+  EEPROM.readString(startingAddress + webUsernameLength + webPasswordLength + idLength, ssid, ssidLength);
+  ssid[ssidLength] = '\0';
+
+  EEPROM.readString(startingAddress + webUsernameLength + webPasswordLength + idLength + ssidLength, password, passwordLength);
+  password[passwordLength] = '\0';
+
+  EEPROM.readString(startingAddress + webUsernameLength + webPasswordLength + idLength + ssidLength + passwordLength, certifacate, certificateLength);
+  certifacate[certificateLength] = '\0';
+
+  Serial.println(webUsername);
+  Serial.println(webPassword);
+  Serial.println(id);
+  Serial.println(ssid);
+  Serial.println(password);
+  Serial.println(certifacate);
+}
+
 int STATE = START;
 
 void loop() {
    
-   Serial.println("Hello2");
+  Serial.println("Hello2");
+  delay(1000);
   // switch (STATE) {
   //   case START:
   //     STATE = WAITING;
