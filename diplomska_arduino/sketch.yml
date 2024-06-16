@@ -3,14 +3,15 @@ profiles:
     fqbn: esp32:esp32:esp32
     platforms:
       - platform: esp32:esp32 (2.0.11)
+      - platform: esp32:arduino (3.0.1)
+        platform_index_url: https://github.com/espressif/arduino-esp32/blob/master/package/package_esp32_index.template.json
     libraries:
       - Adafruit GFX Library (1.11.9)
       - Adafruit BusIO (1.14.5)
       - Adafruit SSD1306 (2.5.9)
       - NTPClient (3.2.1)
       - ArduinoJson (6.21.4)
-      - name: Update
-        url: https://github.com/espressif/arduino-esp32/tree/3.0.1
+      - Update (2.0.0)
     localbuild:
       fqbn: esp32:esp32:esp32
       platforms:
@@ -21,5 +22,3 @@ profiles:
         - Adafruit SSD1306 (2.5.9)
         - NTPClient (3.2.1)
         - ArduinoJson (6.21.4)
-        - name: Update
-          url: https://github.com/espressif/arduino-esp32/tree/3.0.1
