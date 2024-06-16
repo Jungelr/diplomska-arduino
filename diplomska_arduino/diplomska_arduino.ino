@@ -123,8 +123,11 @@ void setup() {
 
 void readEEPROM() {
 
+  EEPROM.begin(4);
   int variables = EEPROM.readInt(0);
+  EEPROM.end();
   int startingAddress = variables * 4 + 4;
+  EEPROM.begin(startingAddress);
   int webUsernameLength = EEPROM.readInt(4);
   Serial.println(webUsernameLength);
   int webPasswordLength = EEPROM.readInt(8);
@@ -143,6 +146,8 @@ void readEEPROM() {
   ssid = new char[ssidLength + 1];
   password = new char[passwordLength + 1];
   certifacate = new char[certificateLength + 1];
+  EEPROM.end();
+  EEPROM.begin(startingAddress + webUsernameLength + webPasswordLength + idLength + ssidLength + passwordLength + certificateLength);
 
   EEPROM.readString(startingAddress, webUsername, webUsernameLength);
   webUsername[webUsernameLength] = '\0';
