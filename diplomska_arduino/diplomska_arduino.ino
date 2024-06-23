@@ -39,44 +39,50 @@
 
 #define START 1
 #define WAITING 2
-#define ACQUIRE 3
-#define WATERING 4
-#define WATERED_WAITING 5
-
-// Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RST);
-
-char *webUsername;
-char *webPassword;
-char *id;
-char *url;
-char *ssid;
-char *password;
-char *certifacate;
-char *hash;
-
-
-String serverName = "https://192.168.0.254:8443";
-
-WiFiUDP ntpUDP;
-NTPClient timeClient(ntpUDP, "pool.ntp.org", 3600,  24*3600*1000);
-
-WiFiClientSecure client;
+#define UPDATING 3
+#define ACQUIRE 4
+#define WATERING 5
+#define WATERED_WAITING 6
 
 class Data {
-  int max;
-  int min;
+  int maxWatering = -1;
+  int minWatering = -1;
+  int minSensorReading = -1;
+  int maxSensorReading = -1;
+
   public:
-  Data(int min, int max) {
-    this->min = min;
-    this->max = max;
-  }
+  Data() {}
   
-  int getMax() {
-    return max;
+  int getMaxWatering() {
+    return maxWatering;
   }
 
-  int getMin() {
-    return min;
+  int getMinWatering() {
+    return minWatering;
+  }
+
+  int getMinSensorReading() {
+    return minSensorReading;
+  }
+
+  int getMaxSensorReading() {
+    return maxSensorReading;
+  }
+
+  void setMaxWatering(int maxWatering) {
+    this->maxWatering = maxWatering;
+  }
+
+  void setMinWatering(int minWatering) {
+    this->minWatering = minWatering;
+  }
+
+  void setMinSensorReading(int minSensorReading) {
+    this->minSensorReading = minSensorReading;
+  }
+
+  void setMaxSensorReading(int maxSensorReading) {
+    this->maxSensorReading = maxSensorReading;
   }
 };
 
@@ -101,6 +107,41 @@ public:
   }
 };
 
+// Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RST);
+
+char *webUsername;
+char *webPassword;
+char *id;
+char *url;
+char *ssid;
+char *password;
+char *certifacate;
+char *hash;
+int hashStart;
+char newHash[45];
+
+String serverName = "https://192.168.0.254:8443";
+
+WiFiUDP ntpUDP;
+NTPClient timeClient(ntpUDP, "pool.ntp.org", 3600,  24*3600*1000);
+
+WiFiClientSecure client;
+static HttpsOTAStatus_t otastatus;
+
+Data data;
+
+void HttpEvent(HttpEvent_t *event) {
+  switch (event->event_id) {
+    case HTTP_EVENT_ERROR: Serial.println("Http Event Error"); break;
+    case HTTP_EVENT_ON_CONNECTED: Serial.println("Http Event On Connected"); break;
+    case HTTP_EVENT_HEADER_SENT: Serial.println("Http Event Header Sent"); break;
+    case HTTP_EVENT_ON_HEADER: Serial.printf("Http Event On Header, key=%s, value=%s\n", event->header_key, event->header_value); break;
+    case HTTP_EVENT_ON_DATA: break;
+    case HTTP_EVENT_ON_FINISH: Serial.println("Http Event On Finish"); break;
+    case HTTP_EVENT_DISCONNECTED: Serial.println("Http Event Disconnected"); break;
+  }
+}
+
 
 void setup() {
   //initialize Serial Monitor
@@ -117,6 +158,8 @@ void setup() {
   // Setup secure wifi client
   client.setCertificate(certifacate);
 
+  // Setup OTA
+  HttpsOTA.onHttpEvent(HttpEvent);
 
   // //reset OLED display via software
   // pinMode(OLED_RST, OUTPUT);
@@ -168,6 +211,7 @@ void readEEPROM() {
   readString(startingAddress + webUsernameLength + webPasswordLength + idLength, ssid, ssidLength);
   readString(startingAddress + webUsernameLength + webPasswordLength + idLength + ssidLength, password, passwordLength);
   readString(startingAddress + webUsernameLength + webPasswordLength + idLength + ssidLength + passwordLength, certifacate, certificateLength);
+  hashStart = startingAddress + webUsernameLength + webPasswordLength + idLength + ssidLength + passwordLength + certificateLength;
   readString(startingAddress + webUsernameLength + webPasswordLength + idLength + ssidLength + passwordLength + certificateLength, hash, hashLength);
 
   Serial.println(webUsername);
@@ -204,26 +248,115 @@ void connectToWifi() {
 int STATE = START;
 
 void loop() {
-   
-  Serial.println("Hello2");
-  Serial.println(timeClient.getFormattedTime());
-  delay(10000);
-  // switch (STATE) {
-  //   case START:
-  //     STATE = WAITING;
-  //     break;
-  //   case WAITING:
-  //     doWaiting();
-  //     break;
-  //   case ACQUIRE:
-  //     doAcquire();
-  //     break;
-  //   case WATERING:
-  //     doWatering();
-  //   default:
-  //     break;
-  // }
+
+  switch (STATE) {
+    case START:
+      checkDataUpdate();
+      STATE = WAITING;
+      break;
+    case WAITING:
+      doCheckUpdate();
+      doWaiting();
+      break;
+    case UPDATING:
+      doUpdate();
+      break;
+    case ACQUIRE:
+      Serial.println("Looping...");
+      delay(10000);
+      //doAcquire();
+      break;
+    case WATERING:
+      //doWatering();
+    default:
+      break;
+  }
 }
+
+#define UPDATE_INTERVAL 15 * 60 * 1000
+
+IntervalWait checkUpdate(UPDATE_INTERVAL);
+
+void doCheckUpdate() {
+
+  if(checkUpdate.shouldWait()) {
+    return;
+  }
+
+  checkCodeUpdate();
+  checkDataUpdate();
+}
+
+void checkCodeUpdate() {
+  
+  getLatestUpdateHash(newHash);
+
+  if (strcmp(hash, newHash) != 0) {
+    STATE = UPDATING;
+    HttpsOTA.begin(url, certifacate);
+  }
+}
+
+void getLatestUpdateHash(char *hashBuffer) {
+
+  WiFiClientSecure client;
+  client.setCACert(certifacate);
+  HTTPClient https;
+  
+  https.begin(client, "https://192.168.0.254:8443/update/latest/hash");
+  https.setAuthorization("arduino_user", "arduino_user");
+
+  Serial.println("xd");
+
+  int httpCode = https.GET();
+  Serial.println(httpCode);
+  Serial.println(https.errorToString(httpCode));
+
+  if (httpCode >= 200 && httpCode < 300) {
+    String payload = https.getString();
+    payload.toCharArray(hashBuffer, 45);
+    Serial.println(hashBuffer);
+  }
+  https.end();
+}
+
+
+void checkDataUpdate() {
+  HTTPClient http;
+
+  String serverPath = serverName + "/api/plants/data" + id;
+  http.begin(client, serverPath.c_str());
+  int httpResponseCode = http.GET();
+  if (httpResponseCode >= 200 && httpResponseCode < 300) {
+    String payload = http.getString();
+
+    Serial.println(payload);
+
+    StaticJsonDocument<200> doc;
+
+    DeserializationError error = deserializeJson(doc, payload.c_str());
+
+    if (error) {
+      Serial.println("Deserilization failed :(");
+      Serial.println(error.f_str());
+    } 
+
+    data.setMinWatering(doc["minWatering"]);
+    data.setMaxWatering(doc["maxWatering"]);
+    data.setMinSensorReading(doc["minSensorReading"]);
+    data.setMaxSensorReading(doc["maxSensorReading"]);
+
+    Serial.print(data.getMinWatering());
+    Serial.print(" ");
+    Serial.print(data.getMaxWatering());
+    Serial.print(" ");
+    Serial.print(data.getMinSensorReading());
+    Serial.print(" ");
+    Serial.print(data.getMaxSensorReading());
+    Serial.println();
+  }
+}
+
 
 #define WAITING_INTERVAL 5000
 
@@ -235,12 +368,40 @@ void doWaiting() {
     return;
   }
 
-  Data data = getData();
   int moisture = getMoisture();
-  if (data.getMin() != -1  && moisture > data.getMax()) {
+  if (data.getMinWatering() != -1  && moisture > data.getMaxWatering()) {
     STATE = ACQUIRE;
   }
 }
+
+void doUpdate() {
+
+  otastatus = HttpsOTA.status();
+  if (otastatus == HTTPS_OTA_SUCCESS) {
+    Serial.println("Firmware written successfully. To reboot device, call API ESP.restart() or PUSH restart button on device");
+    strcpy(hash, newHash);
+    persistNewHash();
+    ESP.restart();
+  } else if (otastatus == HTTPS_OTA_FAIL) {
+    Serial.println("Firmware Upgrade Fail");
+    STATE = WAITING;
+  }
+}
+
+void persistNewHash() {
+  EEPROM.begin(44);
+  writeString(hashStart, newHash, strlen(newHash));
+  EEPROM.commit();
+}
+
+void writeString(int startingAddress, const char *input, int length) {
+  for (int i = startingAddress; i < startingAddress + length; i++ ){
+    Serial.print(input[i - startingAddress]);
+    EEPROM.write(i, input[i - startingAddress]);
+  }
+  Serial.println();
+}
+
 
 #define ACQUIRED_WAITING 1000
 
@@ -263,8 +424,7 @@ void doAcquire() {
 void doWatering() {
 
   int moisture = getMoisture();
-  Data data = getData();
-  if (data.getMax() != -1 && moisture < data.getMin()) {
+  if (moisture < data.getMinWatering()) {
     releasePump();
     pinMode(VALVE, INPUT);
     STATE = WAITING;
@@ -323,38 +483,38 @@ void releasePump() {
   }
 }
 
-Data getData() {
-  if(WiFi.status()== WL_CONNECTED){ 
-    HTTPClient http;
+// Data getData() {
+//   if(WiFi.status()== WL_CONNECTED){ 
+//     HTTPClient http;
 
-    String serverPath = serverName + "/data/ b " + id;
-    http.begin(serverPath.c_str());
-    int httpResponseCode = http.GET();
-    if (httpResponseCode >= 200 && httpResponseCode < 300) {
-      String payload = http.getString();
+//     String serverPath = serverName + "/data/ b " + id;
+//     http.begin(serverPath.c_str());
+//     int httpResponseCode = http.GET();
+//     if (httpResponseCode >= 200 && httpResponseCode < 300) {
+//       String payload = http.getString();
 
-      Serial.println(payload);
+//       Serial.println(payload);
 
-      StaticJsonDocument<200> doc;
+//       StaticJsonDocument<200> doc;
 
-      DeserializationError error = deserializeJson(doc, payload.c_str());
+//       DeserializationError error = deserializeJson(doc, payload.c_str());
 
-      if (error) {
-        Serial.println("Deserilization failed :(");
-        Serial.println(error.f_str());
-        return Data(-1,-1);
-      } 
+//       if (error) {
+//         Serial.println("Deserilization failed :(");
+//         Serial.println(error.f_str());
+//         return Data(-1,-1);
+//       } 
       
-      Data data(doc["min"], doc["max"]);
+//       Data data(doc["min"], doc["max"]);
 
-      Serial.print(data.getMin());
-      Serial.print(" ");
-      Serial.println(data.getMax());
+//       Serial.print(data.getMin());
+//       Serial.print(" ");
+//       Serial.println(data.getMax());
 
-      return data;
-    }
-  }
-}
+//       return data;
+//     }
+//   }
+// }
 
 
 // void displayMoisture(int moisture) {
