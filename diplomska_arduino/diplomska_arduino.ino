@@ -123,7 +123,7 @@ String serverName = "https://192.168.0.254:8443";
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "pool.ntp.org", 3600,  24*3600*1000);
 
-WiFiClientSecure client;
+
 static HttpsOTAStatus_t otastatus;
 
 Data data;
@@ -156,7 +156,8 @@ void setup() {
   timeClient.update();
 
   // Setup secure wifi client
-  client.setCACert(certifacate);
+  // WiFiClientSecure client;
+  // client.setCACert(certifacate);
 
   // Setup OTA
   HttpsOTA.onHttpEvent(HttpEvent);
@@ -305,6 +306,7 @@ void checkCodeUpdate() {
 
 void getLatestUpdateHash(char *hashBuffer) {
 
+
   WiFiClientSecure client;
   client.setCACert(certifacate);
   HTTPClient https;
@@ -328,6 +330,9 @@ void getLatestUpdateHash(char *hashBuffer) {
 
 
 void checkDataUpdate() {
+
+  WiFiClientSecure client;
+  client.setCACert(certifacate);
   HTTPClient https;
 
   String serverPath = serverName + "/api/plants/data/" + id;
