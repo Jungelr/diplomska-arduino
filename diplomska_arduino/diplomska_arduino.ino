@@ -314,8 +314,6 @@ void getLatestUpdateHash(char *hashBuffer) {
   https.begin(client, "https://192.168.0.254:8443/update/latest/hash");
   https.setAuthorization("arduino_user", "arduino_user");
 
-  Serial.println("xd");
-
   int httpCode = https.GET();
   Serial.println(httpCode);
   Serial.println(https.errorToString(httpCode));
