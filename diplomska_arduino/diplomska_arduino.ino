@@ -156,7 +156,7 @@ void setup() {
   timeClient.update();
 
   // Setup secure wifi client
-  client.setCertificate(certifacate);
+  client.setCACert(certifacate);
 
   // Setup OTA
   HttpsOTA.onHttpEvent(HttpEvent);
