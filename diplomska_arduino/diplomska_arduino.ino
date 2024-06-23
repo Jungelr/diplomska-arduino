@@ -326,10 +326,11 @@ void getLatestUpdateHash(char *hashBuffer) {
 
 
 void checkDataUpdate() {
-  HTTPClient http;
+  HTTPClient https;
 
   String serverPath = serverName + "/api/plants/data/" + id;
-  http.begin(client, serverPath.c_str());
+  https.begin(client, serverPath.c_str());
+  https.setAuthorization("arduino_user", "arduino_user");
   int httpResponseCode = http.GET();
   Serial.println(httpResponseCode);
   if (httpResponseCode >= 200 && httpResponseCode < 300) {
