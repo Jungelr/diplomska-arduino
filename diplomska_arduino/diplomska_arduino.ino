@@ -330,6 +330,7 @@ void checkDataUpdate() {
   String serverPath = serverName + "/api/plants/data/" + id;
   http.begin(client, serverPath.c_str());
   int httpResponseCode = http.GET();
+  Serial.println(httpResponseCode);
   if (httpResponseCode >= 200 && httpResponseCode < 300) {
     String payload = http.getString();
 
@@ -358,6 +359,7 @@ void checkDataUpdate() {
     Serial.print(data.getMaxSensorReading());
     Serial.println();
   }
+  http.end();
 }
 
 
