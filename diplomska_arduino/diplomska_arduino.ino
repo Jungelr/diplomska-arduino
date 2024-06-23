@@ -324,7 +324,7 @@ void getLatestUpdateHash(char *hashBuffer) {
 void checkDataUpdate() {
   HTTPClient http;
 
-  String serverPath = serverName + "/api/plants/data" + id;
+  String serverPath = serverName + "/api/plants/data/" + id;
   http.begin(client, serverPath.c_str());
   int httpResponseCode = http.GET();
   if (httpResponseCode >= 200 && httpResponseCode < 300) {
