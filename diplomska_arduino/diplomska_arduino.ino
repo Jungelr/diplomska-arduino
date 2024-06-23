@@ -296,7 +296,7 @@ void checkCodeUpdate() {
     url += ":";
     url += webPassword;
     url += "@192.168.0.254:8443/update/latest";
-    Serial.println(url);
+    Serial.println(url.c_str());
     HttpsOTA.begin(url.c_str(), certifacate);
   }
 }
