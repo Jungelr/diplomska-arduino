@@ -331,10 +331,10 @@ void checkDataUpdate() {
   String serverPath = serverName + "/api/plants/data/" + id;
   https.begin(client, serverPath.c_str());
   https.setAuthorization("arduino_user", "arduino_user");
-  int httpResponseCode = http.GET();
+  int httpResponseCode = https.GET();
   Serial.println(httpResponseCode);
   if (httpResponseCode >= 200 && httpResponseCode < 300) {
-    String payload = http.getString();
+    String payload = https.getString();
 
     Serial.println(payload);
 
@@ -361,7 +361,7 @@ void checkDataUpdate() {
     Serial.print(data.getMaxSensorReading());
     Serial.println();
   }
-  http.end();
+  https.end();
 }
 
 
