@@ -128,6 +128,8 @@ static HttpsOTAStatus_t otastatus;
 
 Data data;
 
+StaticJsonDocument<1000> doc;
+
 void HttpEvent(HttpEvent_t *event) {
   switch (event->event_id) {
     case HTTP_EVENT_ERROR: Serial.println("Http Event Error"); break;
@@ -337,8 +339,6 @@ void checkDataUpdate() {
     String payload = https.getString();
 
     Serial.println(payload);
-
-    StaticJsonDocument<200> doc;
 
     DeserializationError error = deserializeJson(doc, payload.c_str());
 
