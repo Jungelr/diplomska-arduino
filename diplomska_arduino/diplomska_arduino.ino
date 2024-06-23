@@ -108,11 +108,9 @@ public:
 };
 
 // Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RST);
-
 char *webUsername;
 char *webPassword;
 char *id;
-char *url;
 char *ssid;
 char *password;
 char *certifacate;
@@ -273,7 +271,7 @@ void loop() {
   }
 }
 
-#define UPDATE_INTERVAL 15 * 60 * 1000
+#define UPDATE_INTERVAL 2 * 60 * 1000
 
 IntervalWait checkUpdate(UPDATE_INTERVAL);
 
@@ -293,7 +291,12 @@ void checkCodeUpdate() {
 
   if (strcmp(hash, newHash) != 0) {
     STATE = UPDATING;
-    HttpsOTA.begin(url, certifacate);
+    String url = String("https://");
+    url += webUsername;
+    url += ":";
+    url += webPassword;
+    url += "@192.168.0.254:8443/update/latest";
+    HttpsOTA.begin(url.c_str(), certifacate);
   }
 }
 
