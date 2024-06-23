@@ -7,13 +7,19 @@
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
-#include <WiFi.h>
+
 #include <HttpsOTAUpdate.h>
-#include <NTPClient.h>
-#include <WiFiUdp.h>
-#include <HTTPClient.h>
+
 #include <ArduinoJson.h>
 #include <EEPROM.h>
+
+#include <WiFi.h>
+
+#include <NTPClient.h>
+#include <WiFiUdp.h>
+
+#include <WiFiClientSecure.h>
+#include <HTTPClient.h>
 
 //433E6 for Asia
 //866E6 for Europe
@@ -46,12 +52,16 @@ char *url;
 char *ssid;
 char *password;
 char *certifacate;
+char *hash;
 
 
 String serverName = "https://192.168.0.254:8443";
 
 WiFiUDP ntpUDP;
-NTPClient timeClient(ntpUDP, "pool.ntp.org");
+NTPClient timeClient(ntpUDP, "pool.ntp.org", 3600,  24*3600*1000);
+
+WiFiClientSecure client;
+
 class Data {
   int max;
   int min;
@@ -101,10 +111,13 @@ void setup() {
   connectToWifi();
 
   //Start ntp server connection
-
-  NTPClient timeClient(ntpUDP, "pool.ntp.org");
   timeClient.begin();
-  timeClient.setUpdateInterval(24*3600*1000);
+  timeClient.update();
+
+  // Setup secure wifi client
+  client.setCertificate(certifacate);
+
+
   // //reset OLED display via software
   // pinMode(OLED_RST, OUTPUT);
   // digitalWrite(OLED_RST, LOW);
@@ -133,18 +146,21 @@ void readEEPROM() {
   int ssidLength = EEPROM.readInt(16);
   int passwordLength = EEPROM.readInt(20);
   int certificateLength = EEPROM.readInt(24);
+  int hashLength = EEPROM.readInt(28);
   Serial.println(webUsernameLength);
   Serial.println(webPasswordLength);
   Serial.println(idLength);
   Serial.println(ssidLength);
   Serial.println(passwordLength);
   Serial.println(certificateLength);
+  Serial.println(hashLength);
   webUsername = (char *) malloc(webUsernameLength + 1);
   webPassword = (char *) malloc(webPasswordLength + 1);
   id = (char *) malloc(idLength + 1);
   ssid = (char *) malloc(ssidLength + 1);
   password = (char *) malloc(passwordLength + 1);
   certifacate = (char *) malloc(certificateLength + 1);
+  hash = (char *) malloc(hashLength + 1);
 
   readString(startingAddress, webUsername, webUsernameLength);
   readString(startingAddress + webUsernameLength, webPassword, webPasswordLength);
@@ -152,6 +168,7 @@ void readEEPROM() {
   readString(startingAddress + webUsernameLength + webPasswordLength + idLength, ssid, ssidLength);
   readString(startingAddress + webUsernameLength + webPasswordLength + idLength + ssidLength, password, passwordLength);
   readString(startingAddress + webUsernameLength + webPasswordLength + idLength + ssidLength + passwordLength, certifacate, certificateLength);
+  readString(startingAddress + webUsernameLength + webPasswordLength + idLength + ssidLength + passwordLength + certificateLength, hash, hashLength);
 
   Serial.println(webUsername);
   Serial.println(webPassword);
@@ -159,6 +176,7 @@ void readEEPROM() {
   Serial.println(ssid);
   Serial.println(password);
   Serial.println(certifacate);
+  Serial.println(hash);
   EEPROM.end();
 }
 
@@ -188,6 +206,7 @@ int STATE = START;
 void loop() {
    
   Serial.println("Hello2");
+  Serial.println(timeClient.getFormattedTime());
   delay(10000);
   // switch (STATE) {
   //   case START:
@@ -256,16 +275,16 @@ void doWatering() {
 
 bool getPump() {
   if(WiFi.status()== WL_CONNECTED){ 
-    HTTPClient http;
+    HTTPClient https;
 
     String serverPath = serverName + "/acquire?id=" + id;
 
-    http.begin(serverPath.c_str());
+    https.begin(serverPath.c_str());
 
-    int httpResponseCode = http.GET();
+    int httpResponseCode = https.GET();
 
     if (httpResponseCode >= 200 && httpResponseCode < 300) {
-      String payload = http.getString();
+      String payload = https.getString();
 
       Serial.println(payload);
 
@@ -308,7 +327,7 @@ Data getData() {
   if(WiFi.status()== WL_CONNECTED){ 
     HTTPClient http;
 
-    String serverPath = serverName + "/data?id=" + id;
+    String serverPath = serverName + "/data/ b " + id;
     http.begin(serverPath.c_str());
     int httpResponseCode = http.GET();
     if (httpResponseCode >= 200 && httpResponseCode < 300) {
