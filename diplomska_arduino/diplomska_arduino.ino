@@ -294,13 +294,26 @@ void checkCodeUpdate() {
 
   if (strcmp(hash, newHash) != 0) {
     STATE = UPDATING;
-    String url = String("https://");
-    url += webUsername;
-    url += ":";
-    url += webPassword;
-    url += "@192.168.0.254:8443/update/latest";
-    Serial.println(url.c_str());
-    HttpsOTA.begin(url.c_str(), certifacate);
+    
+    int userLength = strlen(webUsername);
+    int passwordLength = strlen(webPassword);
+    int urlLength = 8 + 1 + 33 + 1 + userLength + passwordLength;
+
+    char url[urlLength];
+
+    strncpy(url, "https://", urlLength);
+    strncpy(url + 8, webUsername, urlLength - 8);
+    strncpy(url + 8 + userLength, ":", urlLength - 8 - userLength);
+    strncpy(url + 8 + userLength + 1, webPassword, urlLength - 8 - userLength - 1);
+    strncpy(url + 8 + userLength + 1 + passwordLength, "@192.168.0.254:8443/update/latest", urlLength - 8 - userLength - 1 - passwordLength);
+
+    // String url1 = String("https://");
+    // url1 += webUsername;
+    // url1 += ":";
+    // url1 += webPassword;
+    // url1 += "@192.168.0.254:8443/update/latest";
+    Serial.println(url);
+    HttpsOTA.begin(url, certifacate, false);
   }
 }
 
@@ -399,7 +412,7 @@ void doUpdate() {
 }
 
 void persistNewHash() {
-  EEPROM.begin(44);
+  EEPROM.begin(4096);
   writeString(hashStart, newHash, strlen(newHash));
   EEPROM.commit();
 }
