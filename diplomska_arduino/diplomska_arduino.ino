@@ -267,6 +267,8 @@ int STATE = START;
 
 void loop() {
 
+  Serial.println("Hello");
+
   switch (STATE) {
     case START:
       checkDataUpdate();
