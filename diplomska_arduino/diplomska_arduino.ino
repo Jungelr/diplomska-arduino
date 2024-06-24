@@ -565,11 +565,11 @@ int getMoisture() {
 
   findOutliersWithIQR(arr);
 
-  for (int i = 0; i < 11; i++) {
-    Serial.print(i);
-    Serial.print(": ");
-    Serial.println(arr[i]);
-  }
+  // for (int i = 0; i < 11; i++) {
+  //   Serial.print(i);
+  //   Serial.print(": ");
+  //   Serial.println(arr[i]);
+  // }
 
   return customAverage(arr);
 }
