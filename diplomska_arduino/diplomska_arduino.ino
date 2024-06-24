@@ -117,6 +117,7 @@ char *certifacate;
 char *hash;
 int hashStart;
 char newHash[45];
+char *url;
 
 String serverName = "https://192.168.0.254:8443";
 
@@ -161,6 +162,7 @@ void setup() {
 
   // Setup OTA
   HttpsOTA.onHttpEvent(HttpEvent);
+  createGlobalUrl();
 
   // //reset OLED display via software
   // pinMode(OLED_RST, OUTPUT);
@@ -246,6 +248,21 @@ void connectToWifi() {
   Serial.println(ssid);
 }
 
+void createGlobalUrl() {
+
+  int userLength = strlen(webUsername);
+  int passwordLength = strlen(webPassword);
+  int urlLength = 8 + 1 + 33 + 1 + userLength + passwordLength;
+
+  url = (char *) malloc(urlLength);
+
+  strncpy(url, "https://", urlLength);
+  strncpy(url + 8, webUsername, urlLength - 8);
+  strncpy(url + 8 + userLength, ":", urlLength - 8 - userLength);
+  strncpy(url + 8 + userLength + 1, webPassword, urlLength - 8 - userLength - 1);
+  strncpy(url + 8 + userLength + 1 + passwordLength, "@192.168.0.254:8443/update/latest", urlLength - 8 - userLength - 1 - passwordLength);
+}
+
 int STATE = START;
 
 void loop() {
@@ -294,25 +311,6 @@ void checkCodeUpdate() {
 
   if (strcmp(hash, newHash) != 0) {
     STATE = UPDATING;
-    
-    int userLength = strlen(webUsername);
-    int passwordLength = strlen(webPassword);
-    int urlLength = 8 + 1 + 33 + 1 + userLength + passwordLength;
-
-    char url[urlLength];
-
-    strncpy(url, "https://", urlLength);
-    strncpy(url + 8, webUsername, urlLength - 8);
-    strncpy(url + 8 + userLength, ":", urlLength - 8 - userLength);
-    strncpy(url + 8 + userLength + 1, webPassword, urlLength - 8 - userLength - 1);
-    strncpy(url + 8 + userLength + 1 + passwordLength, "@192.168.0.254:8443/update/latest", urlLength - 8 - userLength - 1 - passwordLength);
-
-    // String url1 = String("https://");
-    // url1 += webUsername;
-    // url1 += ":";
-    // url1 += webPassword;
-    // url1 += "@192.168.0.254:8443/update/latest";
-    Serial.println(url);
     HttpsOTA.begin(url, certifacate, false);
   }
 }
@@ -329,7 +327,7 @@ void getLatestUpdateHash(char *hashBuffer) {
 
   int httpCode = https.GET();
   Serial.println(httpCode);
-  Serial.println(https.errorToString(httpCode));
+  // Serial.println(https.errorToString(httpCode));
 
   if (httpCode >= 200 && httpCode < 300) {
     String payload = https.getString();
