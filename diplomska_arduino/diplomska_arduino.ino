@@ -389,7 +389,7 @@ void doWaiting() {
   }
 
   int moisture = getMoisture();
-  if (moisture < data.getMaxWatering()) {
+  if (moisture < data.getMinWatering()) {
     STATE = ACQUIRE;
   }
 }
@@ -517,11 +517,11 @@ int getMoisture() {
 
   findOutliersWithIQR(arr);
 
-  // for (int i = 0; i < 11; i++) {
-  //   Serial.print(i);
-  //   Serial.print(": ");
-  //   Serial.println(arr[i]);
-  // }
+  for (int i = 0; i < 11; i++) {
+    Serial.print(i);
+    Serial.print(": ");
+    Serial.println(arr[i]);
+  }
 
   int average = customAverage(arr);
   Serial.print("Average reading ");
@@ -549,9 +549,9 @@ void findOutliersWithIQR(int *arr) {
   for (int i = 0; i < 11; i++) {
     if (arr[i] < lower || arr[i] > upper) {
       arr[i] = -1;
-      // Serial.print(i);
-      // Serial.print(": ");
-      // Serial.println(arr[i]);
+      Serial.print(i);
+      Serial.print(": ");
+      Serial.println(arr[i]);
     }
   }
 }
