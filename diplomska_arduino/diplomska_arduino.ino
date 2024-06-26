@@ -465,7 +465,7 @@ bool getPump() {
 
     Serial.println(payload);
 
-    return strcmp({"isAvailable":true}, payload) == 0;
+    return strcmp({"isAvailable":true}, payload.c_str()) == 0;
   }
 
   return false;
