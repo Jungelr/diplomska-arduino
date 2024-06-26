@@ -506,7 +506,7 @@ void releasePump() {
 int getMoisture() {
   pinMode(SOIL, OUTPUT);
   digitalWrite(SOIL, HIGH);
-  delay(10);
+  delay(100);
   int arr[11];// = { 200, 420, 421, 424, 425, 426, 423, 430, 423, 421, 450 };
   for(int i = 0; i < 11; i++) {
     arr[i] = analogRead(DATA);
