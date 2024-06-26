@@ -524,10 +524,12 @@ int getMoisture() {
   // }
 
   int average = customAverage(arr);
+  Serial.print("Average reading ");
+  Serial.println(average);
 
   int normalizedReading = normalizeSensorReadings(average);
 
-  Serial.print("Sensor reading");
+  Serial.print("Sensor reading ");
   Serial.println(normalizedReading);
 
   return normalizedReading;
@@ -583,10 +585,20 @@ int normalizeSensorReadings(int sensorReading) {
     float adjustedMax = (float) data.getMinSensorReading() - data.getMaxSensorReading();
     int adjustedSensorReading = sensorReading - data.getMaxSensorReading();
 
+    Serial.print("Min bigger: ");
+    Serial.print(adjustedMax);
+    Serial.print(" ");
+    Serial.println(adjustedSensorReading);
+
     return (int)(100 - (adjustedSensorReading / adjustedMax ) * 100);
   } else {
     float adjustedMax = (float) data.getMaxSensorReading() - data.getMinSensorReading();
     int adjustedSensorReading = sensorReading - data.getMinSensorReading();
+
+    Serial.print("Max bigger: ");
+    Serial.print(adjustedMax);
+    Serial.print(" ");
+    Serial.println(adjustedSensorReading);
 
     return (int)((adjustedSensorReading / adjustedMax ) * 100);
   }
