@@ -124,6 +124,7 @@ String serverName = "https://192.168.0.254:8443";
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "pool.ntp.org", 3600,  24*3600*1000);
 
+WiFiClientSecure client;
 
 static HttpsOTAStatus_t otastatus;
 
@@ -159,6 +160,7 @@ void setup() {
   // Setup secure wifi client
   // WiFiClientSecure client;
   // client.setCACert(certifacate);
+  client.setCACert(certifacate);
 
   // Setup OTA
   HttpsOTA.onHttpEvent(HttpEvent);
@@ -176,7 +178,7 @@ void setup() {
   //   Serial.println(F("SSD1306 allocation failed"));
   //   for(;;); // Don't proceed, loop forever
   // }
-  pinMode(SOIL, OUTPUT);
+  pinMode(SOIL, INPUT);
   pinMode(DATA, ANALOG);
 }
 
@@ -266,13 +268,11 @@ void createGlobalUrl() {
 int STATE = START;
 
 void loop() {
-
-  Serial.println("Hello");
-
   switch (STATE) {
     case START:
-      checkDataUpdate();
-      STATE = WAITING;
+      if (checkDataUpdate()) {
+        STATE = WAITING;
+      }
       break;
     case WAITING:
       doCheckUpdate();
@@ -282,12 +282,10 @@ void loop() {
       doUpdate();
       break;
     case ACQUIRE:
-      Serial.println("Looping...");
-      delay(10000);
-      //doAcquire();
+      doAcquire();
       break;
     case WATERING:
-      //doWatering();
+      doWatering();
     default:
       break;
   }
@@ -319,13 +317,10 @@ void checkCodeUpdate() {
 
 void getLatestUpdateHash(char *hashBuffer) {
 
-
-  WiFiClientSecure client;
-  client.setCACert(certifacate);
   HTTPClient https;
   
   https.begin(client, "https://192.168.0.254:8443/update/latest/hash");
-  https.setAuthorization("arduino_user", "arduino_user");
+  https.setAuthorization(webUsername, webPassword);
 
   int httpCode = https.GET();
   Serial.println(httpCode);
@@ -340,15 +335,13 @@ void getLatestUpdateHash(char *hashBuffer) {
 }
 
 
-void checkDataUpdate() {
+bool checkDataUpdate() {
 
-  WiFiClientSecure client;
-  client.setCACert(certifacate);
   HTTPClient https;
 
   String serverPath = serverName + "/api/plants/data/" + id;
   https.begin(client, serverPath.c_str());
-  https.setAuthorization("arduino_user", "arduino_user");
+  https.setAuthorization(webUsername, webPassword);
   int httpResponseCode = https.GET();
   Serial.println(httpResponseCode);
   if (httpResponseCode >= 200 && httpResponseCode < 300) {
@@ -376,8 +369,12 @@ void checkDataUpdate() {
     Serial.print(" ");
     Serial.print(data.getMaxSensorReading());
     Serial.println();
+    
+    https.end();
+    return true;
   }
   https.end();
+  return false;
 }
 
 
@@ -392,7 +389,7 @@ void doWaiting() {
   }
 
   int moisture = getMoisture();
-  if (data.getMinWatering() != -1  && moisture > data.getMaxWatering()) {
+  if (moisture < data.getMaxWatering()) {
     STATE = ACQUIRE;
   }
 }
@@ -447,98 +444,51 @@ void doAcquire() {
 void doWatering() {
 
   int moisture = getMoisture();
-  if (moisture < data.getMinWatering()) {
+  if (moisture > data.getMaxWatering()) {
     releasePump();
     pinMode(VALVE, INPUT);
     STATE = WAITING;
   }
 }
 
-
-
 bool getPump() {
-  if(WiFi.status()== WL_CONNECTED){ 
-    HTTPClient https;
+  HTTPClient https;
 
-    String serverPath = serverName + "/acquire?id=" + id;
+  String serverPath = serverName + "/api/pump/acquire/" + id;
 
-    https.begin(serverPath.c_str());
+  https.begin(client, serverPath.c_str());
+  https.setAuthorization(webUsername, webPassword);
+  int httpResponseCode = https.POST("");
 
-    int httpResponseCode = https.GET();
+  if (httpResponseCode >= 200 && httpResponseCode < 300) {
+    String payload = https.getString();
 
-    if (httpResponseCode >= 200 && httpResponseCode < 300) {
-      String payload = https.getString();
+    Serial.println(payload);
 
-      Serial.println(payload);
+    DeserializationError error = deserializeJson(doc, payload.c_str());
 
-      StaticJsonDocument<200> doc;
+    if (error) {
+      Serial.println("Deserilization failed :(");
+      Serial.println(error.f_str());
+      return false;
+    } 
 
-      DeserializationError error = deserializeJson(doc, payload.c_str());
-
-      if (error) {
-        Serial.println("Deserilization failed :(");
-        Serial.println(error.f_str());
-        return false;
-      } 
-
-      return doc["available"] == "yes";
-    }
+    return doc["isAvailable"] == "yes";
   }
 
   return false;
 }
 
 void releasePump() {
-  if(WiFi.status()== WL_CONNECTED){ 
-    HTTPClient http;
+  HTTPClient https;
 
-    String serverPath = serverName + "/release?id=" + id;
+  String serverPath = serverName + "/api/pump/release/" + id;
 
-    http.begin(serverPath.c_str());
-
-    int httpResponseCode = http.GET();
-
-    if (httpResponseCode >= 200 && httpResponseCode < 300) {
-      String payload = http.getString();
-
-      Serial.println(payload);
-    }
-  }
+  https.begin(client, serverPath.c_str());
+  https.setAuthorization(webUsername, webPassword);
+  int httpResponseCode = https.POST("");
+  https.end();
 }
-
-// Data getData() {
-//   if(WiFi.status()== WL_CONNECTED){ 
-//     HTTPClient http;
-
-//     String serverPath = serverName + "/data/ b " + id;
-//     http.begin(serverPath.c_str());
-//     int httpResponseCode = http.GET();
-//     if (httpResponseCode >= 200 && httpResponseCode < 300) {
-//       String payload = http.getString();
-
-//       Serial.println(payload);
-
-//       StaticJsonDocument<200> doc;
-
-//       DeserializationError error = deserializeJson(doc, payload.c_str());
-
-//       if (error) {
-//         Serial.println("Deserilization failed :(");
-//         Serial.println(error.f_str());
-//         return Data(-1,-1);
-//       } 
-      
-//       Data data(doc["min"], doc["max"]);
-
-//       Serial.print(data.getMin());
-//       Serial.print(" ");
-//       Serial.println(data.getMax());
-
-//       return data;
-//     }
-//   }
-// }
-
 
 // void displayMoisture(int moisture) {
 //   display.clearDisplay();
@@ -554,6 +504,7 @@ void releasePump() {
 // }
 
 int getMoisture() {
+  pinMode(SOIL, OUTPUT);
   digitalWrite(SOIL, HIGH);
   delay(10);
   int arr[11];// = { 200, 420, 421, 424, 425, 426, 423, 430, 423, 421, 450 };
@@ -562,6 +513,7 @@ int getMoisture() {
   }
 
   digitalWrite(SOIL, LOW);
+  pinMode(SOIL, INPUT);
 
   findOutliersWithIQR(arr);
 
@@ -571,7 +523,14 @@ int getMoisture() {
   //   Serial.println(arr[i]);
   // }
 
-  return customAverage(arr);
+  int average = customAverage(arr);
+
+  int normalizedReading = normalizeSensorReadings(average);
+
+  Serial.print("Sensor reading");
+  Serial.println(normalizedReading);
+
+  return normalizedReading;
 }
 
 void findOutliersWithIQR(int *arr) {
@@ -588,9 +547,9 @@ void findOutliersWithIQR(int *arr) {
   for (int i = 0; i < 11; i++) {
     if (arr[i] < lower || arr[i] > upper) {
       arr[i] = -1;
-      Serial.print(i);
-      Serial.print(": ");
-      Serial.println(arr[i]);
+      // Serial.print(i);
+      // Serial.print(": ");
+      // Serial.println(arr[i]);
     }
   }
 }
@@ -615,4 +574,20 @@ int customAverage(int *arr) {
     }
   }
   return sum / count;
+}
+
+int normalizeSensorReadings(int sensorReading) {
+
+  if (data.getMinSensorReading() > data.getMaxSensorReading()) {
+    
+    float adjustedMax = (float) data.getMinSensorReading() - data.getMaxSensorReading();
+    int adjustedSensorReading = sensorReading - data.getMaxSensorReading();
+
+    return (int)(100 - (adjustedSensorReading / adjustedMax ) * 100);
+  } else {
+    float adjustedMax = (float) data.getMaxSensorReading() - data.getMinSensorReading();
+    int adjustedSensorReading = sensorReading - data.getMinSensorReading();
+
+    return (int)((adjustedSensorReading / adjustedMax ) * 100);
+  }
 }
