@@ -465,15 +465,7 @@ bool getPump() {
 
     Serial.println(payload);
 
-    DeserializationError error = deserializeJson(doc, payload.c_str());
-
-    if (error) {
-      Serial.println("Deserilization failed :(");
-      Serial.println(error.f_str());
-      return false;
-    } 
-
-    return doc["isAvailable"] == "yes";
+    return strcmp({"isAvailable":true}, payload) == 0;
   }
 
   return false;
