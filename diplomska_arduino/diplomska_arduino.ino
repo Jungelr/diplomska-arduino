@@ -434,8 +434,8 @@ void doAcquire() {
   }
 
   bool result = getPump();
-  Serail.print("Pump?: ");
-  Serial.println(result)
+  Serial.print("Pump?: ");
+  Serial.println(result);
   if (result) {
     STATE = WATERING;
     pinMode(VALVE, OUTPUT);
